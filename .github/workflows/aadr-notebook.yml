@@ -1,0 +1,51 @@
+name: AADR exact-sample notebook
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "notebooks/AADR_Exact_Sample_Discovery_No_Proxies.ipynb"
+      - ".github/workflows/aadr-notebook.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  execute-aadr-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install notebook runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas requests tqdm ipykernel nbclient nbformat
+
+      - name: Execute the live AADR sample-discovery notebook
+        run: |
+          mkdir -p artifacts
+          python -m jupyter nbconvert \
+            --to notebook \
+            --execute notebooks/AADR_Exact_Sample_Discovery_No_Proxies.ipynb \
+            --output executed_AADR_Exact_Sample_Discovery.ipynb \
+            --output-dir artifacts \
+            --ExecutePreprocessor.timeout=5400
+
+      - name: Upload executed notebook and AADR audit outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ancestrylab-aadr-audit-${{ github.run_number }}
+          path: |
+            artifacts/
+            notebooks/AADR_Exact_Sample_Discovery_No_Proxies.ipynb
+          if-no-files-found: warn
+          retention-days: 30
